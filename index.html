@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alderbrook Echoes</title>
+    <style>
+        :root {
+            --primary-text: #e0e0e0;
+            --secondary-text: #a0a0a0;
+            --accent-color: #6a8d92;
+            --background-color: #121212;
+            --ui-background: rgba(18, 18, 18, 0.85);
+            --font-family: 'Georgia', 'Times New Roman', serif;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--background-color);
+            color: var(--primary-text);
+            font-family: var(--font-family);
+        }
+
+        #visual-novel {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            cursor: pointer;
+        }
+        
+        #visual-novel::after {
+            content: 'Click to advance';
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 14px;
+            color: var(--secondary-text);
+            opacity: 0;
+            animation: fadeInOut 3s infinite 2s;
+        }
+
+        #visual-novel.story-complete::after {
+            display: none;
+        }
+
+        #background-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .background-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        .background-svg.active {
+            opacity: 1;
+        }
+
+        #character-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .character-svg {
+            position: absolute;
+            bottom: 0;
+            height: 85%;
+            max-width: 45%;
+            opacity: 0;
+            transition: opacity 1s ease-in-out, transform 1s ease-in-out, filter 0.5s ease-in-out;
+            /* Default state is visible but dimmed (as the listener) */
+            filter: brightness(0.7) saturate(0.8);
+            transform: translateY(20px);
+            animation: characterBreathe 8s ease-in-out infinite;
+        }
+
+        .character-svg.active {
+            /* Active state (the speaker) is bright */
+            filter: brightness(1) saturate(1);
+        }
+        
+        #avery { left: -5%; }
+        #cassian { right: -5%; }
+
+        @keyframes characterBreathe {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-5px) scale(1.005); }
+        }
+
+        #ui-container {
+            position: relative;
+            z-index: 3;
+            width: 80%;
+            max-width: 900px;
+            margin: 0 auto 5vh auto;
+            background: var(--ui-background);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 25px 35px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        #character-name {
+            display: block;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+
+        #dialogue-text {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin: 0;
+            min-height: 100px; /* To prevent layout shift */
+        }
+        
+        .cursor {
+            display: inline-block;
+            background-color: var(--primary-text);
+            margin-left: 2px;
+            width: 8px;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            from, to { background-color: transparent }
+            50% { background-color: var(--primary-text); }
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="visual-novel">
+        
+        <div id="background-container">
+            <!-- Background 1: Hazy, forgotten town -->
+            <svg id="bg-hazy-town" class="background-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                    <filter id="haze">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="8" />
+                    </filter>
+                    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#2c3e50" />
+                        <stop offset="100%" style="stop-color:#4a69bd" />
+                    </linearGradient>
+                </defs>
+                <rect width="1600" height="900" fill="url(#skyGradient)" />
+                <g filter="url(#haze)" opacity="0.6">
+                    <path d="M-50 700 L200 650 L300 680 L450 600 L600 670 L800 620 L1000 700 L1200 650 L1400 680 L1650 600 V900 H-50 Z" fill="#1a252f"/>
+                    <path d="M100 680 L150 640 L250 670 L300 650 v-50 l20-20 l20 20 v50 l100-30 l50 40 v-100 l30-40 l30 40 v100" fill="#233446"/>
+                    <path d="M800 650 L850 610 L950 640 L1000 620 v-80 l20-20 l20 20 v80 l100-30 l50 40 v-70 l30-40 l30 40 v70" fill="#233446"/>
+                </g>
+            </svg>
+            
+            <!-- Background 2: Cracked roads -->
+            <svg id="bg-cracked-roads" class="background-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+                <rect width="1600" height="900" fill="#2c3e50" />
+                <path d="M800,900 C 600,600 1000,300 800,0" stroke="#4a69bd" stroke-width="80" fill="none" stroke-linecap="round">
+                     <animate attributeName="stroke-dasharray" from="0, 1500" to="1500, 0" dur="2s" fill="freeze" />
+                </path>
+                <path d="M800,900 C 900,700 700,400 600,200 C 500, 100, 900, 50, 1000, 0" stroke="#4a69bd" stroke-width="15" fill="none" opacity="0.7" stroke-linecap="round">
+                     <animate attributeName="stroke-dasharray" from="0, 1800" to="1800, 0" dur="2.5s" begin="0.5s" fill="freeze" />
+                </path>
+                <path d="M800,900 C 700,750 900,500 1100,300 C 1300, 100, 900, 150, 850, 0" stroke="#4a69bd" stroke-width="25" fill="none" opacity="0.5" stroke-linecap="round">
+                     <animate attributeName="stroke-dasharray" from="0, 1800" to="1800, 0" dur="2.5s" begin="1s" fill="freeze" />
+                </path>
+                <!-- Potholes -->
+                <circle cx="750" cy="700" r="20" fill="#1a252f" />
+                <circle cx="880" cy="550" r="15" fill="#1a252f" />
+                <circle cx="700" cy="400" r="25" fill="#1a252f" />
+            </svg>
+            
+            <!-- Background 3: Stillness/Silence -->
+            <svg id="bg-stillness" class="background-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                    <linearGradient id="stillSky" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#34495e" />
+                        <stop offset="100%" style="stop-color:#2c3e50" />
+                    </linearGradient>
+                    <g id="mote">
+                        <circle cx="0" cy="0" r="2" fill="rgba(224, 224, 224, 0.5)" />
+                    </g>
+                </defs>
+                <rect width="1600" height="900" fill="url(#stillSky)" />
+                <line x1="0" y1="700" x2="1600" y2="700" stroke="#1a252f" stroke-width="2" />
+                 <!-- Dust motes floating in the silence -->
+                <use href="#mote" x="200" y="300"><animateMotion path="M0,0 L0,50 L0,-50 Z" dur="15s" repeatCount="indefinite"/></use>
+                <use href="#mote" x="600" y="500"><animateMotion path="M0,0 L0,-40 L0,40 Z" dur="12s" repeatCount="indefinite"/></use>
+                <use href="#mote" x="1000" y="400"><animateMotion path="M0,0 L0,60 L0,-60 Z" dur="18s" repeatCount="indefinite"/></use>
+                <use href="#mote" x="1400" y="600"><animateMotion path="M0,0 L0,-30 L0,30 Z" dur="10s" repeatCount="indefinite"/></use>
+            </svg>
+            
+            <!-- Background 4: City Echo -->
+            <svg id="bg-city-echo" class="background-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                    <linearGradient id="citySky" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#2c3e50" />
+                        <stop offset="100%" style="stop-color:#e74c3c" />
+                    </linearGradient>
+                </defs>
+                <rect width="1600" height="900" fill="url(#citySky)" />
+                <!-- Cityscape -->
+                <path d="M0 900 V700 L50 680 L100 700 V650 L150 630 L200 650 V550 L250 530 L300 550 V680 L350 700 V400 L400 380 L450 400 V650 L500 680 L550 650 V500 L600 480 L650 500 V720 L1600 720 V900 H0Z" fill="#1a252f"/>
+                <path d="M700 720 V500 L750 450 L800 500 V600 L850 580 L900 600 V300 L950 250 L1000 300 V720" fill="#233446" />
+                <path d="M1100 720 V450 L1150 420 L1200 450 V600 L1250 580 L1300 600 V720" fill="#12181f" />
+                <!-- Echo of old roads -->
+                <g opacity="0.2" filter="url(#haze)">
+                    <path d="M800,900 C 600,600 1000,300 800,0" stroke="#bdc3c7" stroke-width="40" fill="none"/>
+                    <path d="M800,900 C 900,700 700,400 600,200 C 500, 100, 900, 50, 1000, 0" stroke="#bdc3c7" stroke-width="10" fill="none"/>
+                </g>
+            </svg>
+
+            <!-- Background 5: Parallel Paths -->
+            <svg id="bg-parallel-paths" class="background-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+                <rect width="1600" height="900" fill="#1a252f" />
+                <defs>
+                    <radialGradient id="vanishingPoint">
+                        <stop offset="0%" stop-color="#e0e0e0" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#e0e0e0" stop-opacity="0"/>
+                    </radialGradient>
+                </defs>
+                <circle cx="800" cy="450" r="500" fill="url(#vanishingPoint)" />
+                <!-- Path 1 -->
+                <path d="M800,900 C 600,700 700,500 800,450" stroke="#6a8d92" stroke-width="10" fill="none" stroke-linecap="round">
+                    <animate attributeName="stroke-dasharray" from="0, 500" to="500, 0" dur="2s" fill="freeze" />
+                </path>
+                <!-- Path 2 (The parallel one) -->
+                <path d="M800,900 C 1000,700 900,500 800,450" stroke="rgba(106, 141, 146, 0.5)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="15, 15">
+                     <animate attributeName="stroke-dashoffset" from="30" to="0" dur="1s" repeatCount="indefinite" />
+                </path>
+            </svg>
+
+        </div>
+
+        <div id="character-container">
+            <!-- Avery SVG -->
+            <svg id="avery" class="character-svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMin slice">
+                <g id="avery-body">
+                    <!-- Body -->
+                    <path d="M 200 800 C 150 600, 150 400, 200 250 C 250 400, 250 600, 200 800" fill="#5c4b51"/>
+                    <!-- Head -->
+                    <circle cx="200" cy="200" r="50" fill="#c8a192"/>
+                    <!-- Hair -->
+                    <path d="M 160 160 Q 200 130, 240 160 C 250 180, 230 220, 200 230 C 170 220, 150 180, 160 160" fill="#3d3538"/>
+                    <!-- Eyes -->
+                    <ellipse cx="185" cy="200" rx="4" ry="6" fill="#3d3538"/>
+                    <ellipse cx="215" cy="200" rx="4" ry="6" fill="#3d3538"/>
+                    <!-- Mouth -->
+                    <path d="M 195 220 Q 200 222, 205 220" stroke="#3d3538" stroke-width="2" fill="none"/>
+                </g>
+            </svg>
+
+            <!-- Cassian SVG -->
+            <svg id="cassian" class="character-svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMin slice">
+                <g id="cassian-body">
+                    <!-- Body -->
+                    <path d="M 200 800 C 150 600, 160 400, 200 250 C 240 400, 250 600, 200 800" fill="#34495e"/>
+                    <!-- Head -->
+                    <circle cx="200" cy="200" r="50" fill="#e3c5b9"/>
+                    <!-- Hair -->
+                    <path d="M 170 150 C 180 140, 220 140, 230 150 C 240 190, 200 220, 160 190 Z" fill="#2c2c2c"/>
+                    <!-- Eyes -->
+                    <ellipse cx="185" cy="200" rx="4" ry="6" fill="#2c2c2c"/>
+                    <ellipse cx="215" cy="200" rx="4" ry="6" fill="#2c2c2c"/>
+                    
+                    <!-- Expressions -->
+                    <path id="cassian-neutral" d="M 195 220 H 205" stroke="#2c2c2c" stroke-width="2" fill="none"/>
+                    <path id="cassian-smirk" d="M 195 220 Q 205 215, 210 220" stroke="#2c2c2c" stroke-width="2" fill="none" opacity="0"/>
+                </g>
+            </svg>
+        </div>
+
+        <div id="ui-container">
+            <span id="character-name"></span>
+            <p id="dialogue-text"></p>
+        </div>
+
+    </div>
+
+    <script>
+        const story = [
+            {
+                character: "Avery",
+                text: "It's been... what, almost a decade since we left Alderbrook? Funny how the place still occupies more mental real estate than I care to admit.",
+                background: "bg-hazy-town",
+                avery: "active",
+                cassian: "present",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Cassian",
+                text: "Indeed. It’s one of those locales that lingers—not in obvious ways, but like a scent embedded in old fabric. Faint, familiar. Occasionally suffocating.",
+                background: "bg-hazy-town",
+                avery: "present",
+                cassian: "active",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Avery",
+                text: "You make it sound poetic. I remember more potholes than poetry.",
+                background: "bg-cracked-roads",
+                avery: "active",
+                cassian: "present",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Cassian",
+                text: "(smirking) The roads were metaphorical, too—cracked, winding, resistant to smooth passage.",
+                background: "bg-cracked-roads",
+                avery: "present",
+                cassian: "active",
+                cassianExpr: "smirk"
+            },
+            {
+                character: "Avery",
+                text: "Touché. I suppose we all tried to outpace the stagnation. Or at least rebrand it as tranquility on good days.",
+                background: "bg-stillness",
+                avery: "active",
+                cassian: "present",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Cassian",
+                text: "There’s merit in stillness. But yes—some of us felt the silence a little too loudly. I recall your eagerness to leave was... palpable.",
+                background: "bg-stillness",
+                avery: "present",
+                cassian: "active",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Avery",
+                text: "Well, subtlety was never my forte back then. I thought geography could rewrite identity.",
+                background: "bg-city-echo",
+                avery: "active",
+                cassian: "present",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Cassian",
+                text: "And did it?",
+                background: "bg-city-echo",
+                avery: "present",
+                cassian: "active",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Avery",
+                text: "Let’s just say my accent faded faster than the reasons I ran. But the town—its cadence, its unspoken rules—they surface in odd ways. Certain quiet streets in unfamiliar cities feel eerily... adjacent.",
+                background: "bg-city-echo",
+                avery: "active",
+                cassian: "present",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Cassian",
+                text: "It’s remarkable. We’re oceans away, yet fragments of that place echo in us—sometimes louder than present surroundings.",
+                background: "bg-city-echo",
+                avery: "present",
+                cassian: "active",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Avery",
+                text: "Do you ever regret not staying?",
+                background: "bg-parallel-paths",
+                avery: "active",
+                cassian: "present",
+                cassianExpr: "neutral"
+            },
+            {
+                character: "Cassian",
+                text: "(pauses) Regret is a strong word. Let’s say I occasionally wonder what version of me would’ve emerged had I not opted for departure.",
+                background: "bg-parallel-paths",
+                avery: "present",
+                cassian: "active",
+                cassianExpr: "neutral",
+                pause: 1000 // A 1-second pause after '(pauses)'
+            },
+            {
+                character: "Avery",
+                text: "A parallel Cassian. Sounds like a thesis you’d write and never submit.",
+                background: "bg-parallel-paths",
+                avery: "active",
+                cassian: "present",
+                cassianExpr: "smirk"
+            },
+            {
+                character: "Cassian",
+                text: "Naturally. Some chapters are better contemplated than lived.",
+                background: "bg-parallel-paths",
+                avery: "present",
+                cassian: "active",
+                cassianExpr: "neutral"
+            },
+            {
+                character: null, // End of story
+                text: "The conversation fades, leaving echoes in the quiet space between them.",
+                avery: "fade",
+                cassian: "fade",
+            }
+        ];
+
+        const nameEl = document.getElementById('character-name');
+        const dialogueEl = document.getElementById('dialogue-text');
+        const visualNovelEl = document.getElementById('visual-novel');
+
+        const averyEl = document.getElementById('avery');
+        const cassianEl = document.getElementById('cassian');
+        const cassianNeutralMouth = document.getElementById('cassian-neutral');
+        const cassianSmirkMouth = document.getElementById('cassian-smirk');
+
+        const backgrounds = document.querySelectorAll('.background-svg');
+        
+        let currentLine = 0;
+        let isTyping = false;
+        let typeTimeout;
+
+        function typewriter(text, i = 0, pauseData = null) {
+            isTyping = true;
+            let strippedText = text.replace(/\(.*?\)\s/g, ''); // Remove text like (smirking)
+            
+            if (pauseData && strippedText.toLowerCase().startsWith(pauseData.text)) {
+                clearTimeout(typeTimeout);
+                setTimeout(() => {
+                    typewriter(strippedText, pauseData.text.length);
+                }, pauseData.duration);
+                dialogueEl.innerHTML = strippedText.substring(0, i) + '<span class="cursor"></span>';
+                return;
+            }
+
+            if (i < strippedText.length) {
+                dialogueEl.innerHTML = strippedText.substring(0, i + 1) + '<span class="cursor"></span>';
+                typeTimeout = setTimeout(() => typewriter(strippedText, i + 1, pauseData), 35);
+            } else {
+                dialogueEl.innerHTML = strippedText; // Remove cursor at end
+                isTyping = false;
+            }
+        }
+        
+        function setCassianExpression(expression) {
+            cassianNeutralMouth.style.opacity = (expression === 'smirk') ? '0' : '1';
+            cassianSmirkMouth.style.opacity = (expression === 'smirk') ? '1' : '0';
+        }
+
+        function displayLine() {
+            if (currentLine >= story.length) return;
+
+            const line = story[currentLine];
+            
+            // --- FIX: Logic is simplified to only use CSS classes for highlighting ---
+
+            const setCharacterState = (characterElement, state) => {
+                // Handle visibility (show or hide character)
+                if (state === 'active' || state === 'present') {
+                    characterElement.style.opacity = '1';
+                    characterElement.style.transform = 'translateY(0)';
+                } else if (state === 'fade' || !state) {
+                    characterElement.style.opacity = '0';
+                    characterElement.style.transform = 'translateY(20px)';
+                }
+
+                // Handle highlighting (bright or dim)
+                if (state === 'active') {
+                    characterElement.classList.add('active');
+                } else {
+                    characterElement.classList.remove('active');
+                }
+            };
+            
+            setCharacterState(averyEl, line.avery);
+            setCharacterState(cassianEl, line.cassian);
+            
+            if(line.cassianExpr) {
+                setCassianExpression(line.cassianExpr);
+            }
+            
+            // Handle background
+            if (line.background) {
+                backgrounds.forEach(bg => {
+                    bg.classList.toggle('active', bg.id === line.background);
+                });
+            }
+
+            // Handle UI
+            nameEl.textContent = line.character || '';
+            
+            let pauseData = null;
+            if (line.pause) {
+                 const match = line.text.match(/\((.*?)\)/);
+                 if (match) {
+                     pauseData = { text: match[1], duration: line.pause };
+                 }
+            }
+            typewriter(line.text, 0, pauseData);
+        }
+
+        function next() {
+            if (isTyping) {
+                clearTimeout(typeTimeout);
+                isTyping = false;
+                let strippedText = story[currentLine].text.replace(/\(.*?\)\s/g, '');
+                dialogueEl.innerHTML = strippedText;
+            } else {
+                currentLine++;
+                if (currentLine < story.length) {
+                    displayLine();
+                } else {
+                    visualNovelEl.style.cursor = 'default';
+                    visualNovelEl.classList.add('story-complete');
+                }
+            }
+        }
+
+        visualNovelEl.addEventListener('click', next);
+        
+        // Initial setup
+        displayLine();
+    </script>
+</body>
+</html>
